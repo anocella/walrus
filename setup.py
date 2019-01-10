@@ -19,7 +19,7 @@ setup(
     long_description=long_description,
     author='Charles Leifer',
     author_email='coleifer@gmail.com',
-    url='http://github.com/coleifer/walrus/',
+    url='http://github.com/anocella/walrus/',
     install_requires=['redis>=3.0.0'],
     packages=find_packages(),
     package_data={
