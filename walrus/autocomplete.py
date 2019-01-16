@@ -136,13 +136,15 @@ class Autocomplete(object):
         clean_title = ' '.join(self.tokenize_title(title))
         title_score = self.score_token(clean_title)
 
-        for idx, word in enumerate(self.tokenize_title(title)):
-            word_score = self.score_token(word)
-            position_score = word_score + (self._offset * idx)
-            key_score = position_score + title_score
-            for substring in self.substrings(word):
-                self.database.zadd(self.word_key(substring),
-                                   {combined_id: key_score})
+        with self.database.get_transaction() as store_pipe:
+            for idx, word in enumerate(self.tokenize_title(title)):
+                word_score = self.score_token(word)
+                position_score = word_score + (self._offset * idx)
+                key_score = position_score + title_score
+                for substring in self.substrings(word):
+                    store_pipe.zadd(self.word_key(substring),
+                                        {combined_id: key_score})
+            store_pipe.execute()
 
         return True
 
@@ -160,13 +162,15 @@ class Autocomplete(object):
         combined_id = self.object_key(obj_id, obj_type)
         title = self._title_data[combined_id]
 
-        for word in self.tokenize_title(title):
-            for substring in self.substrings(word):
-                key = self.word_key(substring)
-                if not self.database.zrange(key, 1, 2):
-                    self.database.delete(key)
-                else:
-                    self.database.zrem(key, combined_id)
+        with self.database.get_transaction() as rem_pipe:
+            for word in self.tokenize_title(title):
+                for substring in self.substrings(word):
+                    key = self.word_key(substring)
+                    if not self.database.zrange(key, 1, 2):
+                        rem_pipe.delete(key)
+                    else:
+                        rem_pipe.zrem(key, combined_id)
+            rem_pipe.execute()
 
         del self._data[combined_id]
         del self._title_data[combined_id]
