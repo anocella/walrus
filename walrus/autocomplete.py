@@ -255,8 +255,30 @@ class Autocomplete(object):
                 boosts[obj_type] = score
         return boosts
 
-    def search(self, phrase, limit=None, boosts=None, chunk_size=1000,
-                key=False):
+    def _search_result_key(self, phrase, limit=None, boosts=None, chunk_size=1000):
+        cleaned = self.tokenize_title(phrase, stopwords=False)
+        if not cleaned:
+            return
+
+        all_boosts = self._load_saved_boosts()
+        if PY3 and boosts:
+            for key in boosts:
+                all_boosts[encode(key)] = boosts[key]
+        elif boosts:
+            all_boosts.update(boosts)
+
+        if len(cleaned) == 1 and not all_boosts:
+            result_key = self.word_key(cleaned[0])
+        else:
+            result_key = self.get_cache_key(cleaned, all_boosts)
+            if result_key not in self.database:
+                self.database.zinterstore(
+                    result_key,
+                    list(map(self.word_key, cleaned)))
+            self.database.expire(result_key, self._cache_timeout)
+        return result_key
+
+    def search(self, phrase, limit=None, boosts=None, chunk_size=1000):
         """
         Perform a search for the given phrase. Objects whose title
         matches the search will be returned. The values returned
@@ -290,9 +312,6 @@ class Autocomplete(object):
                     result_key,
                     list(map(self.word_key, cleaned)))
             self.database.expire(result_key, self._cache_timeout)
-
-        if key:
-            return result_key
 
         results = self.database.ZSet(result_key)
         if all_boosts:
