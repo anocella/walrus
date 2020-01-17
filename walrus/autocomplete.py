@@ -255,7 +255,8 @@ class Autocomplete(object):
                 boosts[obj_type] = score
         return boosts
 
-    def search(self, phrase, limit=None, boosts=None, chunk_size=1000):
+    def search(self, phrase, limit=None, boosts=None, chunk_size=1000,
+                key=False):
         """
         Perform a search for the given phrase. Objects whose title
         matches the search will be returned. The values returned
@@ -289,6 +290,9 @@ class Autocomplete(object):
                     result_key,
                     list(map(self.word_key, cleaned)))
             self.database.expire(result_key, self._cache_timeout)
+
+        if key:
+            return result_key
 
         results = self.database.ZSet(result_key)
         if all_boosts:
