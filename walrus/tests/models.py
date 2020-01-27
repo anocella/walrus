@@ -55,6 +55,18 @@ class TestModels(WalrusTestCase):
                     text='n%s-%s' % (i + 1, j + 1),
                     tags=['t%s' % (k + 1) for k in range(j)])
 
+    def test_textfield_whitespace(self):
+        h = User.create(username='huey cat')
+        z = User.create(username='zaizee cat')
+        h_db = User.load('huey cat')
+        self.assertEqual(h_db.username, 'huey cat')
+        z_db = User.load('zaizee cat')
+        self.assertEqual(z_db.username, 'zaizee cat')
+
+        query = User.query(User.username == 'huey cat')
+        self.assertEqual([u.username for u in query], ['huey cat'])
+        self.assertRaises(KeyError, User.load, 'mickey dog')
+
     def test_store_none(self):
         class Simple(BaseModel):
             text = TextField()
@@ -657,6 +669,19 @@ class TestModels(WalrusTestCase):
         huey_db2 = Account.get(Account.name == 'huey')
         self.assertTrue(huey_db2.active)
         self.assertTrue(huey_db2.admin)
+
+    def test_query_boolean(self):
+        class BT(BaseModel):
+            key = TextField(primary_key=True)
+            flag = BooleanField(default=False, index=True)
+
+        for i in range(4):
+            BT.create(key='k%s' % i, flag=True if i % 2 else False)
+
+        query = BT.query(BT.flag == True)
+        self.assertEqual(sorted([bt.key for bt in query]), ['k1', 'k3'])
+        query = BT.query(BT.flag == False)
+        self.assertEqual(sorted([bt.key for bt in query]), ['k0', 'k2'])
 
     def test_uuid(self):
         class Beacon(BaseModel):

@@ -182,6 +182,14 @@ class Hash(Container):
         else:
             return list(self)
 
+    def setnx(self, key, value):
+        """
+        Set ``key`` to ``value`` if ``key`` does not exist.
+
+        :returns: True if successfully set or False if the key already existed.
+        """
+        return bool(self.database.hsetnx(self.key, key, value))
+
     @chainable_method
     def update(self, *args, **kwargs):
         """
@@ -540,7 +548,7 @@ class ZSet(Sortable, Container):
     def add(self, _mapping=None, **kwargs):
         """
         Add the given item/score pairs to the ZSet. Arguments are
-        specified as ``item1, score1, item2, score2...``.
+        specified as a dictionary of item: score, or as keyword arguments.
         """
         if _mapping is not None:
             _mapping.update(kwargs)
@@ -1382,7 +1390,7 @@ class ConsumerGroup(object):
                 elif self.database.type(key) != b'stream':
                     raise ValueError('Consumer group key "%s" exists and is '
                                      'not a stream. To prevent data-loss '
-                                     'this key will not be deleted.')
+                                     'this key will not be deleted.' % key)
 
         resp = {}
 
